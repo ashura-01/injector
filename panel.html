@@ -2,25 +2,110 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{
-  background:#0b0b0b;
-  color:#eaeaea;
-  font-family: monospace;
-  margin:0;
-}
-section{
-  border-bottom:1px solid #222;
-  padding:8px;
+/* --- HACKER VIBE THEME (NO ANIMATIONS, OPTIMIZED) --- */
+:root {
+  --bg: #0c0f0c;
+  --bg-darker: #070907;
+  --header-bg: #111511;
+  --border: #1f3a1f;
+  --border-light: #2f5a2f;
+  --text: #b3ffb3;
+  --text-muted: #6f9f6f;
+  --accent: #00ff00; /* Matrix green */
+  --accent-hover: #33ff33;
+  --accent-pressed: #00cc00;
+  --glow: rgba(0, 255, 0, 0.15);
+  --font-mono: 'Courier New', 'SF Mono', 'Monaco', 'Consolas', monospace;
+  --font-sans: 'Courier New', 'Menlo', 'Courier', monospace;
+
+  /* Firefox ESR optimized scrollbars */
+  scrollbar-width: thin;
+  scrollbar-color: #2f5a2f #0a0e0a;
 }
 
-/* --- VS CODE STYLE EDITOR CONTAINER --- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Subtle static effect instead of animation */
+body::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 255, 0, 0.02) 0%, transparent 80%);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Simple scrollbar for WebKit */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-darker);
+  border: 1px solid var(--border);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border: 1px solid var(--border-light);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-hover);
+}
+
+section {
+  border-bottom: 1px solid var(--border);
+  padding: 10px;
+}
+
+.title {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.title::before {
+  content: '$>';
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+/* --- HACKER EDITOR --- */
 .editor-container {
   position: relative;
-  width: 98%;
-  background: #1e1e1e; /* VS Code dark background */
-  border: 1px solid #333;
-  border-radius: 4px;
+  width: 100%;
+  background: var(--bg-darker);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
   overflow: hidden;
 }
 
@@ -28,25 +113,33 @@ section{
   margin: 0;
   padding: 10px;
   width: 100%;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
-  min-height: 60px;
-  box-sizing: border-box;
+  min-height: 100px;
+  max-height: 300px;
+  overflow-y: auto;
+  tab-size: 4;
 }
 
 #payload {
   position: relative;
   z-index: 2;
   background: transparent;
-  color: transparent; /* Makes text invisible so the highlight shows through */
-  caret-color: #fff;  /* Keeps the blinking cursor visible */
+  color: transparent;
+  caret-color: var(--accent);
   border: none;
   outline: none;
-  resize: none;
+  resize: vertical;
   display: block;
+}
+
+#payload:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  background: rgba(0, 255, 0, 0.02);
 }
 
 #highlighting {
@@ -54,106 +147,322 @@ section{
   top: 0;
   left: 0;
   z-index: 1;
-  color: #d4d4d4; /* Default VS Code text color */
-  pointer-events: none; /* Let clicks pass through to the textarea */
+  color: var(--text);
+  pointer-events: none;
+  background: var(--bg-darker);
 }
 
-/* --- SYNTAX HIGHLIGHTING COLORS --- */
-.token-string { color: #ce9178; }    /* Terracotta Strings */
-.token-keyword { color: #c586c0; }   /* Pink Keywords */
-.token-tag { color: #569cd6; }       /* Blue Tags */
-.token-attr { color: #9cdcfe; }      /* Light Blue Attributes */
-.token-comment { color: #6a9955; }   /* Green Comments */
-.token-number { color: #b5cea8; }    /* Lime Numbers */
-
-button{
-  background:#1a1a1a;
-  color:#9cf;
-  border:1px solid #333;
-  padding:5px 8px;
-  margin:4px 2px;
-  cursor:pointer;
-}
-button:hover{ background:#222; }
-
-.badge{
-  display:inline-block;
-  background:#111;
-  border:1px solid #333;
-  padding:4px 6px;
-  margin:3px;
-  cursor:pointer;
-}
-.badge:hover{ background:#222; }
-.badge.active{ background:#222; }
-
-.title{
-  color:#6cf;
-  font-weight:bold;
-  margin-bottom:4px;
-}
-
-.payload{
-  color:#b6ffb6;
-  display:block;
-  width:fit-content;
-  font-size: medium;
-  max-width:95%;
-  white-space:nowrap;
-}
-.badge.bypass {
-  color: #FFA500;
-  border: 1px solid #333;
-  margin: 3px;
-  padding: 4px 6px;
+/* --- HACKER BUTTONS (NO ANIMATIONS) --- */
+button {
+  background: var(--bg-darker);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  margin: 2px;
   cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 60px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* --- TOGGLE BUTTON COLORS --- */
-#urlCode { color: #ff79c6; border-color: #ff79c6; }
-#base64 { color: #50fa7b; border-color: #50fa7b; }
-#hexCode { color: #f1fa8c; border-color: #f1fa8c; }
-#htmlcode { color: #00ecfd; border-color: #00ecfd; }
+button:hover {
+  background: var(--bg);
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
 
-/* MODE COLORS */
-#modeBox .badge[data-mode="xss"]{color:#ffb86c;border-color:#ffb86c;}
-#modeBox .badge[data-mode="sqli"]{color:#8be9fd;border-color:#8be9fd;}
-#modeBox .badge[data-mode="cmd"]{color:#f38ba8;border-color:#f38ba8;}
-#modeBox .badge[data-mode="ssti"]{color:#cba6f7;border-color:#cba6f7;}
-#modeBox .badge[data-mode="lfi"]{color:#a6e3a1;border-color:#a6e3a1;}
-#modeBox .badge[data-mode="redirect"]{color:#fab387;border-color:#fab387;}
+button:active {
+  background: var(--accent);
+  color: var(--bg-darker);
+  border-color: var(--accent-hover);
+}
+
+button:focus {
+  outline: 1px solid var(--accent);
+}
+
+#injectBtn {
+  background: var(--accent);
+  border: 1px solid var(--accent-hover);
+  color: var(--bg-darker);
+  font-weight: bold;
+  padding: 8px;
+  margin: 0;
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+}
+
+#injectBtn:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent);
+}
+
+#injectBtn:active {
+  background: var(--accent-pressed);
+}
+
+/* --- HACKER BADGES (NO ANIMATIONS) --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-darker);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  margin: 3px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  height: 24px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+}
+
+/* Simple brackets instead of pseudo-elements with content */
+.badge {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.badge:hover {
+  background: var(--bg);
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.badge:active {
+  background: var(--accent);
+  color: var(--bg-darker);
+  border-color: var(--accent-hover);
+}
+
+.active {
+  background: var(--accent) !important;
+  border-color: var(--accent-hover) !important;
+  color: var(--bg-darker) !important;
+}
+
+/* Grid System */
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  background: var(--bg-darker);
+}
+
+/* Transform Buttons - Just colors, no effects */
+#urlCode {
+  color: #ffff00;
+  border-left: 3px solid #ffff00;
+}
+#base64 {
+  color: #00ffff;
+  border-left: 3px solid #00ffff;
+}
+#hexCode {
+  color: #ff00ff;
+  border-left: 3px solid #ff00ff;
+}
+#htmlcode {
+  color: #ff8800;
+  border-left: 3px solid #ff8800;
+}
+
+/* Bypass Badges */
+.badge.bypass {
+  color: #ffaa00;
+  border-color: #4a3a1a;
+}
+
+.badge.bypass:hover {
+  border-color: #ffaa00;
+}
+
+/* Mode Badge Colors */
+#modeBox .badge[data-mode="xss"] {
+  color: #ff7b7b;
+  border-color: #4a2a2a;
+}
+#modeBox .badge[data-mode="sqli"] {
+  color: #7bc5ff;
+  border-color: #2a3a4a;
+}
+#modeBox .badge[data-mode="cmd"] {
+  color: #ff9f7b;
+  border-color: #4a3a2a;
+}
+#modeBox .badge[data-mode="ssti"] {
+  color: #cb7bff;
+  border-color: #3a2a4a;
+}
+#modeBox .badge[data-mode="lfi"] {
+  color: #7bff9f;
+  border-color: #2a4a2a;
+}
+#modeBox .badge[data-mode="redirect"] {
+  color: #ffdb7b;
+  border-color: #4a4a2a;
+}
+
+/* Type Badges */
+#typeBox .badge {
+  background: var(--bg);
+  padding: 2px 6px;
+  font-size: 10px;
+  height: 20px;
+}
+
+/* Payload Badges */
+#payloadBox .badge {
+  display: inline-block;
+  background: var(--bg-darker);
+  padding: 6px 10px;
+  margin: 4px 2px;
+  font-size: 11px;
+  word-break: break-all;
+  height: auto;
+  min-height: 28px;
+  white-space: normal;
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
+}
+
+#payloadBox .badge:hover {
+  background: var(--bg);
+  border-left-width: 4px;
+}
+
+/* Syntax Highlighting */
+.token-string { color: #ffff99; }
+.token-keyword { color: #ff99ff; font-weight: bold; }
+.token-tag { color: #99ff99; }
+.token-attr { color: #ffaa66; }
+.token-comment { color: #6f9f6f; font-style: italic; }
+.token-number { color: #99ffff; }
+
+/* Loading State */
+.loading {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+  border: 1px dashed var(--border);
+}
+
+/* Error State */
+.error {
+  color: #ff6b6b;
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 68, 68, 0.05);
+  border: 1px solid #ff6b6b;
+}
+
+/* No special cursor for titles */
+[title] {
+  cursor: default;
+}
+
+/* Simple responsive */
+@media (max-width: 600px) {
+  button {
+    width: calc(50% - 6px);
+  }
+
+  .badge {
+    font-size: 10px;
+    padding: 2px 5px;
+  }
+}
+
+/* Focus indicator - simple */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Firefox ESR specific */
+@-moz-document url-prefix() {
+  button, .badge {
+    border-width: 1px;
+  }
+
+  #payload, #highlighting {
+    scrollbar-width: thin;
+  }
+}
+
+/* Static footer */
+.footer-hint {
+  padding: 6px 12px;
+  color: var(--text-muted);
+  font-size: 9px;
+  border-top: 1px solid var(--border);
+  text-align: right;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.footer-hint span {
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  background: var(--bg-darker);
+}
 </style>
 </head>
 <body>
 
-<section>
+<section style="background: var(--header-bg);">
   <div class="title">Payload Injection</div>
   <div class="editor-container">
     <div id="highlighting" aria-hidden="true"></div>
-    <textarea id="payload" placeholder="Type or select a payload..." spellcheck="false"></textarea>
+    <textarea
+      id="payload"
+      placeholder=">_ Enter payload or select from library..."
+      spellcheck="false"
+      title="Enter your payload here"
+      aria-label="Payload input field"
+    ></textarea>
   </div>
-  <button id="injectBtn">Inject into URL</button>
+  <button
+    id="injectBtn"
+    title="Inject payload into current page"
+    aria-label="Inject payload"
+  >INJECT TO TARGET</button>
 </section>
 
-<section>
-  <div class="title">Transform Selection (Toggle)</div>
-  <button id="urlCode">urlCode</button>
-  <button id="base64">base64</button>
-  <button id="hexCode">hexCode</button>
-  <button id="htmlcode">htmlCode</button>
-</section>
+<div class="grid-container">
+  <section>
+    <div class="title">Transforms</div>
+    <button id="urlCode" title="URL Encode/Decode selected text">URL</button>
+    <button id="base64" title="Base64 Encode/Decode selected text">B64</button>
+    <button id="hexCode" title="Hex Encode/Decode selected text">HEX</button>
+    <button id="htmlcode" title="HTML Encode/Decode selected text">HTML</button>
+  </section>
 
-<section>
-  <div class="title">Bypass Characters</div>
-  <div id="bypass"></div>
-</section>
+  <section>
+    <div class="title">Bypass</div>
+    <div id="bypass" aria-label="Common bypass characters"></div>
+  </section>
 
-<section>
-  <div class="title">Payloads</div>
-  <div id="modeBox"></div>
-  <div id="typeBox" style="margin-top:6px;"></div>
-  <div id="payloadBox" style="margin-top:6px;"></div>
-</section>
+  <section>
+    <div class="title">Payload Library</div>
+    <div id="modeBox" aria-label="Payload categories"></div>
+    <div id="typeBox" style="margin-top:8px;" aria-label="Payload types"></div>
+    <div id="payloadBox" style="margin-top:12px; border-top: 1px solid var(--border); padding-top: 12px;" aria-label="Available payloads"></div>
+  </section>
+</div>
+
+<!-- Static footer -->
+<div class="footer-hint">
+  <span>CTRL+ENTER TO INJECT | TAB TO NAVIGATE</span>
+</div>
 
 <script src="panel.js"></script>
 </body>
