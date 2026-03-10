@@ -115,218 +115,69 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* ---------- INJECTION LOGIC ---------- */
+  // ─── panel.js ───────────────────────────────────────────────────────────────
+  // Devtools panels can't use browser.tabs, so we ask the background script
+  // to run the injection for us via runtime messaging.
+
+  const injectionQueue = [];
   let isInjecting = false;
   let lastInjectionTime = 0;
   const MIN_INJECTION_INTERVAL = 500;
-  let pendingPayload = null;
-  let injectionTimer = null;
 
-  injectBtn.onclick = async () => {
+  injectBtn.onclick = () => {
     const p = payload.value.trim();
     if (!p) return;
-
-    if (pendingPayload) {
-      console.log("Clearing previous pending payload:", pendingPayload);
-      pendingPayload = null;
-    }
-
-    if (injectionTimer) {
-      clearTimeout(injectionTimer);
-      injectionTimer = null;
-    }
-
-    if (isInjecting) {
-      console.log("Already injecting, setting as pending:", p);
-      pendingPayload = p;
-
-      injectionTimer = setTimeout(() => {
-        if (pendingPayload) {
-          console.log("Auto-clearing stale pending payload");
-          pendingPayload = null;
-        }
-      }, 2000);
-
-      return;
-    }
-
-    const now = Date.now();
-    if (now - lastInjectionTime < MIN_INJECTION_INTERVAL) {
-      console.log("Rate limited, waiting...");
-      setTimeout(() => processInjection(p), MIN_INJECTION_INTERVAL - (now - lastInjectionTime));
-      return;
-    }
-
-    await processInjection(p);
+    injectionQueue.push(p);
+    processQueue();
   };
 
-  async function processInjection(p) {
-    if (injectionTimer) {
-      clearTimeout(injectionTimer);
-      injectionTimer = null;
+  function processQueue() {
+    if (isInjecting || injectionQueue.length === 0) return;
+
+    const now = Date.now();
+    const wait = MIN_INJECTION_INTERVAL - (now - lastInjectionTime);
+    if (wait > 0) {
+      setTimeout(processQueue, wait);
+      return;
     }
 
     isInjecting = true;
-    copyText(p);
+    const p = injectionQueue.shift();
 
-    try {
-      // Method 1: Try using executeScript
-      try {
-        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-        if (tabs && tabs[0]) {
-          const tabId = tabs[0].id;
-
-          await browser.tabs.executeScript(tabId, {
-            code: `
-            (function() {
-              setTimeout(() => {
-                try {
-                  const payload = ${JSON.stringify(p)};
-                  const currentUrl = window.location.href;
-
-                  const buildUrl = (currentUrl, payload) => {
-                    const hashIndex = currentUrl.indexOf('#');
-                    const hash = hashIndex !== -1 ? currentUrl.slice(hashIndex) : '';
-                    const urlWithoutHash = hashIndex !== -1 ? currentUrl.slice(0, hashIndex) : currentUrl;
-
-                    const queryIndex = urlWithoutHash.indexOf('?');
-                    const baseUrl = queryIndex !== -1 ? urlWithoutHash.slice(0, queryIndex) : urlWithoutHash;
-                    const queryString = queryIndex !== -1 ? urlWithoutHash.slice(queryIndex + 1) : '';
-
-                    if (payload.startsWith('#')) {
-                      return baseUrl + (queryString ? '?' + queryString : '') + payload;
-                    }
-                    else if (payload.startsWith('?')) {
-                      return baseUrl + payload + hash;
-                    }
-                    else if (payload.startsWith('&')) {
-                      if (queryString) {
-                        return baseUrl + '?' + queryString + payload + hash;
-                      } else {
-                        return baseUrl + '?' + payload.slice(1) + hash;
-                      }
-                    }
-                    else if (queryString) {
-                      const params = queryString.split('&');
-                      if (params.length > 0) {
-                        const firstParam = params[0].split('=')[0];
-                        params[0] = firstParam + '=' + payload;
-                        return baseUrl + '?' + params.join('&') + hash;
-                      } else {
-                        return baseUrl + '?param=' + payload + hash;
-                      }
-                    }
-                    else {
-                      return baseUrl + '?param=' + payload + hash;
-                    }
-                  };
-
-                  const finalUrl = buildUrl(currentUrl, payload);
-
-                  if (finalUrl && finalUrl !== currentUrl) {
-                    window.location.replace(finalUrl);
-                  }
-                } catch (e) {
-                  console.error("Injection error:", e);
-                }
-              }, 50);
-            })();
-            `,
-            runAt: 'document_end'
-          });
-
-          console.log("Injection attempted via tabs.executeScript");
-          lastInjectionTime = Date.now();
-          pendingPayload = null;
-
-          setTimeout(() => {
-            isInjecting = false;
-          }, MIN_INJECTION_INTERVAL);
-
-          return;
-        }
-      } catch (tabError) {
-        console.log("Tab execution failed:", tabError);
-      }
-
-      // Method 2: Use devtools.inspectedWindow.eval
-      const [result, error] = await browser.devtools.inspectedWindow.eval(`
-      (function() {
-        try {
-          const payload = ${JSON.stringify(p)};
-          const currentUrl = window.location.href;
-
-          const buildUrl = (currentUrl, payload) => {
-            const hashIndex = currentUrl.indexOf('#');
-            const hash = hashIndex !== -1 ? currentUrl.slice(hashIndex) : '';
-            const urlWithoutHash = hashIndex !== -1 ? currentUrl.slice(0, hashIndex) : currentUrl;
-
-            const queryIndex = urlWithoutHash.indexOf('?');
-            const baseUrl = queryIndex !== -1 ? urlWithoutHash.slice(0, queryIndex) : urlWithoutHash;
-            const queryString = queryIndex !== -1 ? urlWithoutHash.slice(queryIndex + 1) : '';
-
-            if (payload.startsWith('#')) {
-              return baseUrl + (queryString ? '?' + queryString : '') + payload;
-            }
-            else if (payload.startsWith('?')) {
-              return baseUrl + payload + hash;
-            }
-            else if (payload.startsWith('&')) {
-              if (queryString) {
-                return baseUrl + '?' + queryString + payload + hash;
-              } else {
-                return baseUrl + '?' + payload.slice(1) + hash;
-              }
-            }
-            else if (queryString) {
-              const params = queryString.split('&');
-              if (params.length > 0) {
-                const firstParam = params[0].split('=')[0];
-                params[0] = firstParam + '=' + payload;
-                return baseUrl + '?' + params.join('&') + hash;
-              } else {
-                return baseUrl + '?param=' + payload + hash;
-              }
-            }
-            else {
-              return baseUrl + '?param=' + payload + hash;
-            }
-          };
-
-          const finalUrl = buildUrl(currentUrl, payload);
-
-          if (finalUrl && finalUrl !== currentUrl) {
-            window.location.href = finalUrl;
-            return { success: true };
-          }
-          return { success: false, message: 'URL unchanged' };
-        } catch (e) {
-          return { success: false, error: e.toString() };
-        }
-      })();
-      `);
-
-      if (error) {
-        console.error("DevTools eval error:", error);
-        showTemporaryMessage('Injection failed: ' + error, 'error');
-      } else if (result && result.success) {
-        console.log("Injection successful");
-      }
-
-      lastInjectionTime = Date.now();
-      pendingPayload = null;
-
-    } catch (e) {
+    processInjection(p)
+    .catch((e) => {
       console.error("Injection failed:", e);
-      showTemporaryMessage('Injection failed. Try refreshing the page.', 'error');
-      pendingPayload = null;
-    } finally {
-      setTimeout(() => {
-        isInjecting = false;
-        pendingPayload = null;
-      }, MIN_INJECTION_INTERVAL);
-    }
+      showTemporaryMessage('Injection failed: ' + e, 'error');
+    })
+    .finally(() => {
+      lastInjectionTime = Date.now();
+      isInjecting = false;
+      if (injectionQueue.length > 0) {
+        setTimeout(processQueue, MIN_INJECTION_INTERVAL);
+      }
+    });
   }
 
+  async function processInjection(p) {
+    copyText(p);
+
+    // Ask background.js to do the actual tab injection
+    const tabId = browser.devtools.inspectedWindow.tabId;
+    const response = await browser.runtime.sendMessage({
+      action: 'injectPayload',
+      tabId,
+      payload: p
+    });
+
+    if (response && response.success) {
+      console.log("Injection succeeded");
+    } else if (response && response.navigationError) {
+      // Page navigated — injection worked, context just died
+      console.log("Navigation after injection (success)");
+    } else {
+      console.warn("Injection response:", response);
+    }
+  }
   /* ---------- HTML ENCODE/DECODE ---------- */
   let htmlToggle = false;
 

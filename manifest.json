@@ -13,13 +13,19 @@
     "<all_urls>"
   ],
   "web_accessible_resources": [
-  {
-    "resources": ["payload_db.json"],
-    "matches": ["<all_urls>"]
-  }
-],
+    {
+      "resources": [
+        "payload_db.json"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": [
+      "background.js"
+    ]
   },
   "browser_specific_settings": {
     "gecko": {
