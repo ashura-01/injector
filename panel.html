@@ -320,17 +320,26 @@ button:focus {
 
 /* Payload Badges */
 #payloadBox .badge {
-  display: inline-block;
+  display: block;  /* Changed from inline-block to block */
   background: var(--bg-darker);
-  padding: 6px 10px;
-  margin: 4px 2px;
+  padding: 8px 12px;  /* Slightly increased padding for better vertical spacing */
+  margin: 6px 0;  /* Changed margin to only vertical (top/bottom) */
   font-size: 11px;
   word-break: break-all;
   height: auto;
-  min-height: 28px;
+  min-height: 32px;  /* Slightly increased for better touch target */
   white-space: normal;
   border-left: 3px solid var(--accent);
   border-radius: 0;
+  width: 100%;  /* Ensure full width */
+  box-sizing: border-box;  /* Include padding in width calculation */
+}
+
+/* Optional: Add a subtle hover effect that works well with vertical layout */
+#payloadBox .badge:hover {
+  background: var(--bg);
+  border-left-width: 4px;
+  transform: translateX(2px);  /* Slight shift right on hover for visual feedback */
 }
 
 #payloadBox .badge:hover {
@@ -413,6 +422,92 @@ button:focus {
   border: 1px solid var(--border);
   padding: 2px 6px;
   background: var(--bg-darker);
+}
+
+/* Load More Button */
+.load-more-btn {
+  width: 100%;
+  margin-top: 15px;
+  margin-bottom: 5px;
+  padding: 10px;
+  background: var(--accent);
+  color: var(--bg-darker);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: opacity 0.2s;
+}
+
+.load-more-btn:hover {
+  opacity: 0.9;
+  background: var(--accent-hover);
+}
+
+.load-more-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* Search Box */
+.search-box {
+  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-darker);
+  padding: 8px 5px;
+  z-index: 10;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+.search-input:focus {
+  outline: 1px solid var(--accent);
+  border-color: var(--accent);
+}
+
+/* Count Info */
+.count-info {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: var(--bg-darker);
+  border-radius: 4px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+/* End Message */
+.end-message {
+  text-align: center;
+  padding: 15px;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+/* Highlight Search Term */
+.search-highlight {
+  background: #ffd700;
+  color: #000;
+  padding: 2px 0;
+  font-weight: bold;
 }
 </style>
 </head>

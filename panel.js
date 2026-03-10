@@ -18,14 +18,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   const htmlcodebtn = document.getElementById("htmlcode");
 
   // Configuration
-  const PAYLOAD_BATCH_SIZE = 50; // Load 50 payloads at a time
+  const PAYLOAD_BATCH_SIZE = 10; // Load 10 payloads at a time
   let currentMode = null;
   let currentType = null;
   let currentPage = 0;
   let isLoadingMore = false;
-  let allPayloads = []; // Store all payloads for current mode/type
-  let observer = null; // Intersection observer for infinite scroll
+  let allLoadedPayloads = []; // Store loaded payloads for current mode/type
+  let totalPayloadCount = 0; // Store total count without loading all
   let searchTerm = ''; // For search functionality
+  let PAYLOAD_DB = {}; // Will hold the database
 
   // Show loading state
   payloadBox.innerHTML = "<div class='loading'>Loading payload database...</div>";
@@ -113,7 +114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     showTemporaryMessage('Copied to clipboard!');
   }
 
-  /* ---------- INJECTION LOGIC (UNCHANGED) ---------- */
+  /* ---------- INJECTION LOGIC ---------- */
   let isInjecting = false;
   let lastInjectionTime = 0;
   const MIN_INJECTION_INTERVAL = 500;
@@ -424,11 +425,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ========== OPTIMIZED PAYLOAD DATABASE LOADING ========== */
 
-  // Load only the structure first (mode and type names)
+  // Load the payload database
   async function loadPayloadStructure() {
     try {
-      // Try to load a lightweight index file first (you'll need to create this)
-      // If not available, load the full DB but only extract structure
       const url = browser.runtime.getURL("payload_db.json");
       const response = await fetch(url);
 
@@ -436,20 +435,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Use streaming JSON parser for large files
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let result = '';
-
-      // Read the stream in chunks
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        result += decoder.decode(value, { stream: true });
-      }
-
       // Parse the complete JSON
-      PAYLOAD_DB = JSON.parse(result);
+      PAYLOAD_DB = await response.json();
 
       // Initialize with just the structure
       initAppStructure();
@@ -482,12 +469,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       b.onclick = () => {
         document.querySelectorAll(".badge.mode").forEach(x => x.classList.remove("active"));
         b.classList.add("active");
-
-        // Clear previous intersection observer
-        if (observer) {
-          observer.disconnect();
-          observer = null;
-        }
 
         currentMode = m;
         renderTypes(m);
@@ -522,16 +503,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelectorAll(".badge.type").forEach(x => x.classList.remove("active"));
         b.classList.add("active");
 
-        // Clear previous intersection observer
-        if (observer) {
-          observer.disconnect();
-          observer = null;
-        }
-
         currentType = t;
         currentPage = 0;
         searchTerm = ''; // Reset search
-        loadPayloadBatch(m, t, 0, true); // Load first batch
+
+        // Store total count but don't load all payloads yet
+        if (PAYLOAD_DB[m] && PAYLOAD_DB[m][t]) {
+          allLoadedPayloads = []; // Clear previous payloads
+          totalPayloadCount = PAYLOAD_DB[m][t].length;
+          loadPayloadBatch(m, t, 0, true); // Load first batch
+        }
       };
 
       typeBox.appendChild(b);
@@ -539,7 +520,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (i === 0) {
         b.classList.add("active");
         currentType = t;
-        loadPayloadBatch(m, t, 0, true);
+
+        // Store total count but don't load all payloads yet
+        if (PAYLOAD_DB[m] && PAYLOAD_DB[m][t]) {
+          allLoadedPayloads = [];
+          totalPayloadCount = PAYLOAD_DB[m][t].length;
+          loadPayloadBatch(m, t, 0, true);
+        }
       }
     });
   }
@@ -548,107 +535,40 @@ document.addEventListener("DOMContentLoaded", async () => {
   function loadPayloadBatch(mode, type, page = 0, reset = false) {
     if (!PAYLOAD_DB[mode] || !PAYLOAD_DB[mode][type]) return;
 
+    const allDbPayloads = PAYLOAD_DB[mode][type];
+
     if (reset) {
-      allPayloads = PAYLOAD_DB[mode][type];
       currentPage = 0;
       payloadBox.innerHTML = "";
 
       // Add search box if there are many payloads
-      if (allPayloads.length > 100) {
+      if (totalPayloadCount > 20) {
         addSearchBox();
       }
+
+      // Show count info
+      addPayloadCountInfo(totalPayloadCount);
     }
 
     const start = page * PAYLOAD_BATCH_SIZE;
-    const end = Math.min(start + PAYLOAD_BATCH_SIZE, allPayloads.length);
+    const end = Math.min(start + PAYLOAD_BATCH_SIZE, allDbPayloads.length);
 
-    if (start >= allPayloads.length) return;
+    if (start >= allDbPayloads.length) return;
+
+    // Load only the current batch from the full DB
+    const currentBatch = allDbPayloads.slice(start, end);
+
+    // Store in our local array for search functionality
+    if (reset) {
+      allLoadedPayloads = currentBatch;
+    } else {
+      allLoadedPayloads = [...allLoadedPayloads, ...currentBatch];
+    }
 
     // Use document fragment for better performance
     const fragment = document.createDocumentFragment();
 
-    for (let i = start; i < end; i++) {
-      const p = allPayloads[i];
-      const d = document.createElement("div");
-      d.className = "badge payload";
-      d.textContent = p;
-      d.onclick = () => {
-        payload.value = p;
-        autoGrow(payload);
-        copyText(p);
-      };
-      fragment.appendChild(d);
-    }
-
-    payloadBox.appendChild(fragment);
-
-    // Add load more button or setup infinite scroll
-    if (end < allPayloads.length) {
-      if (allPayloads.length > 500) {
-        // For very large datasets, use infinite scroll
-        setupInfiniteScroll();
-      } else {
-        // For medium datasets, add load more button
-        addLoadMoreButton(mode, type, page + 1);
-      }
-    }
-  }
-
-  function addSearchBox() {
-    const searchContainer = document.createElement("div");
-    searchContainer.style.marginBottom = "10px";
-    searchContainer.style.position = "sticky";
-    searchContainer.style.top = "0";
-    searchContainer.style.background = "var(--bg-darker)";
-    searchContainer.style.padding = "5px";
-    searchContainer.style.zIndex = "10";
-
-    const searchInput = document.createElement("input");
-    searchInput.type = "text";
-    searchInput.placeholder = "🔍 Search payloads...";
-    searchInput.style.width = "100%";
-    searchInput.style.padding = "6px";
-    searchInput.style.background = "var(--bg)";
-    searchInput.style.border = "1px solid var(--border)";
-    searchInput.style.color = "var(--text)";
-    searchInput.style.fontFamily = "var(--font-mono)";
-
-    searchInput.oninput = (e) => {
-      searchTerm = e.target.value.toLowerCase();
-      filterPayloads();
-    };
-
-    searchContainer.appendChild(searchInput);
-    payloadBox.prepend(searchContainer);
-  }
-
-  function filterPayloads() {
-    if (!searchTerm) {
-      // Reset to show all
-      payloadBox.innerHTML = "";
-      currentPage = 0;
-      loadPayloadBatch(currentMode, currentType, 0, false);
-      return;
-    }
-
-    const filtered = allPayloads.filter(p =>
-    p.toLowerCase().includes(searchTerm)
-    );
-
-    renderFilteredPayloads(filtered);
-  }
-
-  function renderFilteredPayloads(filtered) {
-    payloadBox.innerHTML = "";
-
-    if (filtered.length === 0) {
-      payloadBox.innerHTML = "<div class='loading'>No matching payloads</div>";
-      return;
-    }
-
-    const fragment = document.createDocumentFragment();
-
-    filtered.slice(0, PAYLOAD_BATCH_SIZE).forEach(p => {
+    currentBatch.forEach(p => {
       const d = document.createElement("div");
       d.className = "badge payload";
       d.textContent = p;
@@ -662,67 +582,225 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     payloadBox.appendChild(fragment);
 
-    if (filtered.length > PAYLOAD_BATCH_SIZE) {
-      const moreBtn = document.createElement("button");
-      moreBtn.textContent = `Show all ${filtered.length} results`;
-      moreBtn.style.width = "100%";
-      moreBtn.style.marginTop = "10px";
-      moreBtn.onclick = () => {
-        renderFilteredPayloads(filtered); // This will show all
-      };
-      payloadBox.appendChild(moreBtn);
+    // Check if we have more payloads to load
+    const loadedCount = allLoadedPayloads.length;
+
+    if (loadedCount < totalPayloadCount) {
+      // Remove existing load more button if any
+      const existingBtn = document.getElementById("loadMoreBtn");
+      if (existingBtn) existingBtn.remove();
+
+      addLoadMoreButton(mode, type, page + 1, loadedCount, totalPayloadCount);
+    } else {
+      // Remove load more button if all loaded
+      const existingBtn = document.getElementById("loadMoreBtn");
+      if (existingBtn) existingBtn.remove();
+
+      // Show end message
+      addEndMessage();
     }
   }
 
-  function addLoadMoreButton(mode, type, nextPage) {
+  function addPayloadCountInfo(total) {
+    // Remove existing count info if any
+    const existingCount = document.getElementById("payloadCountInfo");
+    if (existingCount) existingCount.remove();
+
+    const countInfo = document.createElement("div");
+    countInfo.id = "payloadCountInfo";
+    countInfo.className = "count-info";
+    countInfo.textContent = `Total: ${total} payloads • Showing ${PAYLOAD_BATCH_SIZE}`;
+
+    // Insert after search box if exists, otherwise at the beginning
+    const searchBox = document.getElementById("searchContainer");
+    if (searchBox) {
+      searchBox.insertAdjacentElement('afterend', countInfo);
+    } else {
+      payloadBox.insertBefore(countInfo, payloadBox.firstChild);
+    }
+  }
+
+  function addSearchBox() {
+    // Remove existing search if any
+    const existingSearch = document.getElementById("searchContainer");
+    if (existingSearch) existingSearch.remove();
+
+    const searchContainer = document.createElement("div");
+    searchContainer.id = "searchContainer";
+    searchContainer.className = "search-box";
+
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.className = "search-input";
+    searchInput.placeholder = "🔍 Search in loaded payloads... (Press Enter)";
+
+    searchInput.onkeyup = (e) => {
+      if (e.key === 'Enter') {
+        searchTerm = e.target.value.toLowerCase();
+        filterPayloads();
+      }
+    };
+
+    searchInput.oninput = (e) => {
+      if (e.target.value === '') {
+        searchTerm = '';
+        renderLoadedPayloads();
+      }
+    };
+
+    // Add search button
+    const searchBtn = document.createElement("button");
+    searchBtn.textContent = "Search";
+    searchBtn.style.marginTop = "5px";
+    searchBtn.style.width = "100%";
+    searchBtn.onclick = () => {
+      searchTerm = searchInput.value.toLowerCase();
+      filterPayloads();
+    };
+
+    searchContainer.appendChild(searchInput);
+    searchContainer.appendChild(searchBtn);
+
+    payloadBox.insertBefore(searchContainer, payloadBox.firstChild);
+  }
+
+  function filterPayloads() {
+    if (!searchTerm) {
+      renderLoadedPayloads();
+      return;
+    }
+
+    // Search only in loaded payloads
+    const filtered = allLoadedPayloads.filter(p =>
+    p.toLowerCase().includes(searchTerm)
+    );
+
+    renderFilteredPayloads(filtered);
+  }
+
+  function renderLoadedPayloads() {
+    // Keep the search box and count info but re-render all loaded payloads
+    const searchContainer = document.getElementById("searchContainer");
+    const countInfo = document.getElementById("payloadCountInfo");
+
+    // Store elements to preserve
+    const searchHTML = searchContainer ? searchContainer.outerHTML : '';
+    const countHTML = countInfo ? countInfo.outerHTML : '';
+
+    payloadBox.innerHTML = searchHTML + countHTML;
+
+    // Re-render all loaded payloads
+    const fragment = document.createDocumentFragment();
+
+    allLoadedPayloads.forEach(p => {
+      const d = document.createElement("div");
+      d.className = "badge payload";
+      d.textContent = p;
+      d.onclick = () => {
+        payload.value = p;
+        autoGrow(payload);
+        copyText(p);
+      };
+      fragment.appendChild(d);
+    });
+
+    payloadBox.appendChild(fragment);
+
+    // Restore load more button if needed
+    const loadedCount = allLoadedPayloads.length;
+    if (loadedCount < totalPayloadCount) {
+      addLoadMoreButton(currentMode, currentType, Math.floor(loadedCount / PAYLOAD_BATCH_SIZE), loadedCount, totalPayloadCount);
+    } else if (loadedCount === totalPayloadCount && totalPayloadCount > 0) {
+      addEndMessage();
+    }
+  }
+
+  function renderFilteredPayloads(filtered) {
+    // Keep search box but replace results
+    const searchContainer = document.getElementById("searchContainer");
+    const searchHTML = searchContainer ? searchContainer.outerHTML : '';
+
+    payloadBox.innerHTML = searchHTML;
+
+    if (filtered.length === 0) {
+      const noResults = document.createElement("div");
+      noResults.className = "loading";
+      noResults.style.padding = "20px";
+      noResults.textContent = "🔍 No matching payloads in loaded set";
+      payloadBox.appendChild(noResults);
+      return;
+    }
+
+    // Show search results info
+    const resultInfo = document.createElement("div");
+    resultInfo.className = "count-info";
+    resultInfo.textContent = `🔍 Found ${filtered.length} matches in loaded payloads`;
+    payloadBox.appendChild(resultInfo);
+
+    const fragment = document.createDocumentFragment();
+
+    filtered.forEach(p => {
+      const d = document.createElement("div");
+      d.className = "badge payload";
+
+      // Highlight search term
+      if (searchTerm) {
+        const index = p.toLowerCase().indexOf(searchTerm);
+        if (index !== -1) {
+          const before = p.substring(0, index);
+          const match = p.substring(index, index + searchTerm.length);
+          const after = p.substring(index + searchTerm.length);
+          d.innerHTML = `${before}<span class="search-highlight">${match}</span>${after}`;
+        } else {
+          d.textContent = p;
+        }
+      } else {
+        d.textContent = p;
+      }
+
+      d.onclick = () => {
+        payload.value = p;
+        autoGrow(payload);
+        copyText(p);
+      };
+      fragment.appendChild(d);
+    });
+
+    payloadBox.appendChild(fragment);
+  }
+
+  function addLoadMoreButton(mode, type, nextPage, loadedCount, totalCount) {
     // Remove existing load more button if any
     const existingBtn = document.getElementById("loadMoreBtn");
     if (existingBtn) existingBtn.remove();
 
     const loadMoreBtn = document.createElement("button");
     loadMoreBtn.id = "loadMoreBtn";
-    loadMoreBtn.textContent = "Load More...";
-    loadMoreBtn.style.width = "100%";
-    loadMoreBtn.style.marginTop = "10px";
+    loadMoreBtn.className = "load-more-btn";
+    loadMoreBtn.innerHTML = `⬇️ Load More (${loadedCount}/${totalCount}) ⬇️`;
 
     loadMoreBtn.onclick = () => {
-      loadMoreBtn.textContent = "Loading...";
+      loadMoreBtn.innerHTML = '⏳ Loading...';
       loadMoreBtn.disabled = true;
 
       setTimeout(() => {
         loadPayloadBatch(mode, type, nextPage);
-        loadMoreBtn.remove();
       }, 100);
     };
 
     payloadBox.appendChild(loadMoreBtn);
   }
 
-  function setupInfiniteScroll() {
-    if (observer) observer.disconnect();
+  function addEndMessage() {
+    // Remove existing end message if any
+    const existingMsg = document.getElementById("endMessage");
+    if (existingMsg) existingMsg.remove();
 
-    observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !isLoadingMore) {
-          const lastChild = payloadBox.lastElementChild;
-          if (lastChild && lastChild.tagName === 'DIV' && !searchTerm) {
-            isLoadingMore = true;
-
-            setTimeout(() => {
-              currentPage++;
-              loadPayloadBatch(currentMode, currentType, currentPage);
-              isLoadingMore = false;
-            }, 100);
-          }
-        }
-      });
-    }, { threshold: 0.5, rootMargin: "100px" });
-
-    // Observe the last payload element
-    const payloadItems = payloadBox.querySelectorAll(".badge.payload");
-    if (payloadItems.length > 0) {
-      observer.observe(payloadItems[payloadItems.length - 1]);
-    }
+    const endMsg = document.createElement("div");
+    endMsg.id = "endMessage";
+    endMsg.className = "end-message";
+    endMsg.textContent = '<<---------end------->>';
+    payloadBox.appendChild(endMsg);
   }
 
   /* ---------- ADD CACHE FOR FREQUENTLY ACCESSED PAYLOADS ---------- */
@@ -747,9 +825,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  /* ---------- LOAD THE DATABASE ---------- */
-  await loadPayloadStructure();
-
   // Helper function for temporary messages
   function showTemporaryMessage(text, type = 'info') {
     const msgDiv = document.createElement('div');
@@ -769,4 +844,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.appendChild(msgDiv);
     setTimeout(() => msgDiv.remove(), 2000);
   }
+
+  // Add keyboard shortcut for injection (Ctrl+Enter)
+  payload.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      injectBtn.click();
+    }
+  });
+
+  /* ---------- LOAD THE DATABASE ---------- */
+  await loadPayloadStructure();
 });
