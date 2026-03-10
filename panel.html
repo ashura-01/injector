@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body{
+  background:#0b0b0b;
+  color:#eaeaea;
+  font-family: monospace;
+  margin:0;
+}
+section{
+  border-bottom:1px solid #222;
+  padding:8px;
+}
+
+/* --- VS CODE STYLE EDITOR CONTAINER --- */
+.editor-container {
+  position: relative;
+  width: 98%;
+  background: #1e1e1e; /* VS Code dark background */
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#payload, #highlighting {
+  margin: 0;
+  padding: 10px;
+  width: 100%;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+
+#payload {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  color: transparent; /* Makes text invisible so the highlight shows through */
+  caret-color: #fff;  /* Keeps the blinking cursor visible */
+  border: none;
+  outline: none;
+  resize: none;
+  display: block;
+}
+
+#highlighting {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  color: #d4d4d4; /* Default VS Code text color */
+  pointer-events: none; /* Let clicks pass through to the textarea */
+}
+
+/* --- SYNTAX HIGHLIGHTING COLORS --- */
+.token-string { color: #ce9178; }    /* Terracotta Strings */
+.token-keyword { color: #c586c0; }   /* Pink Keywords */
+.token-tag { color: #569cd6; }       /* Blue Tags */
+.token-attr { color: #9cdcfe; }      /* Light Blue Attributes */
+.token-comment { color: #6a9955; }   /* Green Comments */
+.token-number { color: #b5cea8; }    /* Lime Numbers */
+
+button{
+  background:#1a1a1a;
+  color:#9cf;
+  border:1px solid #333;
+  padding:5px 8px;
+  margin:4px 2px;
+  cursor:pointer;
+}
+button:hover{ background:#222; }
+
+.badge{
+  display:inline-block;
+  background:#111;
+  border:1px solid #333;
+  padding:4px 6px;
+  margin:3px;
+  cursor:pointer;
+}
+.badge:hover{ background:#222; }
+.badge.active{ background:#222; }
+
+.title{
+  color:#6cf;
+  font-weight:bold;
+  margin-bottom:4px;
+}
+
+.payload{
+  color:#b6ffb6;
+  display:block;
+  width:fit-content;
+  font-size: medium;
+  max-width:95%;
+  white-space:nowrap;
+}
+.badge.bypass {
+  color: #FFA500;
+  border: 1px solid #333;
+  margin: 3px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+/* --- TOGGLE BUTTON COLORS --- */
+#urlCode { color: #ff79c6; border-color: #ff79c6; }
+#base64 { color: #50fa7b; border-color: #50fa7b; }
+#hexCode { color: #f1fa8c; border-color: #f1fa8c; }
+#htmlcode { color: #00ecfd; border-color: #00ecfd; }
+
+/* MODE COLORS */
+#modeBox .badge[data-mode="xss"]{color:#ffb86c;border-color:#ffb86c;}
+#modeBox .badge[data-mode="sqli"]{color:#8be9fd;border-color:#8be9fd;}
+#modeBox .badge[data-mode="cmd"]{color:#f38ba8;border-color:#f38ba8;}
+#modeBox .badge[data-mode="ssti"]{color:#cba6f7;border-color:#cba6f7;}
+#modeBox .badge[data-mode="lfi"]{color:#a6e3a1;border-color:#a6e3a1;}
+#modeBox .badge[data-mode="redirect"]{color:#fab387;border-color:#fab387;}
+</style>
+</head>
+<body>
+
+<section>
+  <div class="title">Payload Injection</div>
+  <div class="editor-container">
+    <div id="highlighting" aria-hidden="true"></div>
+    <textarea id="payload" placeholder="Type or select a payload..." spellcheck="false"></textarea>
+  </div>
+  <button id="injectBtn">Inject into URL</button>
+</section>
+
+<section>
+  <div class="title">Transform Selection (Toggle)</div>
+  <button id="urlCode">urlCode</button>
+  <button id="base64">base64</button>
+  <button id="hexCode">hexCode</button>
+  <button id="htmlcode">htmlCode</button>
+</section>
+
+<section>
+  <div class="title">Bypass Characters</div>
+  <div id="bypass"></div>
+</section>
+
+<section>
+  <div class="title">Payloads</div>
+  <div id="modeBox"></div>
+  <div id="typeBox" style="margin-top:6px;"></div>
+  <div id="payloadBox" style="margin-top:6px;"></div>
+</section>
+
+<script src="panel.js"></script>
+</body>
+</html>

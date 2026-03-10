@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "injector(DevTools)",
+  "version": "1.0",
+  "description": "Dark Hackbar inside DevTools for CTF & pentesting",
+  "devtools_page": "devtools.html",
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "injector-devtools@ctf-tools.local",
+      "strict_min_version": "109.0"
+    }
+  }
+}
