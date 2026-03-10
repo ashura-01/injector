@@ -426,6 +426,50 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ========== OPTIMIZED PAYLOAD DATABASE LOADING ========== */
 
   // Load the payload database
+  // Add this function to your panel.js (add it after PAYLOAD_DB is loaded)
+  function generateCategoryColors(modes) {
+    let styleSheet = '';
+
+    modes.forEach((mode, index) => {
+      // Generate hue based on string hash (more consistent than index)
+      const hash = mode.split('').reduce((acc, char) => {
+        return char.charCodeAt(0) + ((acc << 5) - acc);
+      }, 0);
+
+      const hue = Math.abs(hash % 360);
+      const color = `hsl(${hue}, 75%, 65%)`;        // Brighter text
+      const borderColor = `hsl(${hue}, 75%, 25%)`;   // Darker border
+      const hoverBg = `hsla(${hue}, 50%, 15%, 0.8)`; // Subtle hover background
+
+      styleSheet += `
+      #modeBox .badge.mode[data-mode="${mode}"] {
+      color: ${color} !important;
+      border-color: ${borderColor} !important;
+      background-color: var(--bg-darker) !important;
+      }
+      #modeBox .badge.mode[data-mode="${mode}"]:hover {
+      background-color: ${hoverBg} !important;
+      border-color: ${color} !important;
+      }
+      #modeBox .badge.mode.active[data-mode="${mode}"] {
+      background-color: var(--accent) !important;
+      color: var(--bg-darker) !important;
+      border-color: var(--accent-hover) !important;
+      }
+      `;
+    });
+
+    // Add or update style tag
+    let styleTag = document.getElementById('dynamic-category-colors');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'dynamic-category-colors';
+      document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = styleSheet;
+  }
+
+  // Modify your loadPayloadStructure function to include color generation
   async function loadPayloadStructure() {
     try {
       const url = browser.runtime.getURL("payload_db.json");
@@ -435,8 +479,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Parse the complete JSON
       PAYLOAD_DB = await response.json();
+
+      // Generate dynamic colors for all categories
+      const modes = Object.keys(PAYLOAD_DB);
+      generateCategoryColors(modes);
 
       // Initialize with just the structure
       initAppStructure();
