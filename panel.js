@@ -411,17 +411,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   /* ---------- BYPASS ---------- */
-  [
-    "'", '"', '`', '\\', '/', '<', '>', '#', ';', '|', '&', '&&', '||',
-    '%00', '%0a', '%0d', '%09', '%20', '$()', '${}', '%3c', '%3e', '/">',
-                          '<!--', '-->', '{{', '}}', '${', '}}', '{{'
-  ].forEach(c => {
-    const b = document.createElement("span");
-    b.className = "badge bypass";
-    b.textContent = c;
-    b.onclick = () => copyText(c);
-    bypass.appendChild(b);
-  });
+  // [
+  //   "'", '"', '`', '\\', '/', '<', '>', '#', ';', '|', '&', '&&', '||',
+  //   '%00', '%0a', '%0d', '%09', '%20', '$()', '${}', '%3c', '%3e', '/">',
+  //                         '<!--', '-->', '{{', '}}', '${', '}}', '{{'
+  // ].forEach(c => {
+  //   const b = document.createElement("span");
+  //   b.className = "badge bypass";
+  //   b.textContent = c;
+  //   b.onclick = () => copyText(c);
+  //   bypass.appendChild(b);
+  // });
 
   /* ========== OPTIMIZED PAYLOAD DATABASE LOADING ========== */
 
